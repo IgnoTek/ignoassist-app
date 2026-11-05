@@ -27,8 +27,8 @@ jobs:
         run: |
           chmod +x ./gradlew
           set -o pipefail
-          VC=$(( ${{ github.run_number }} + 100 ))
-          VN="1.0.${{ github.run_number }}"
+          VC=$(( ${{ github.run_number }} + 200 ))
+          VN="1.1.${{ github.run_number }}"
           echo "versionCode=$VC  versionName=$VN"
           ./gradlew assembleDebug --no-daemon --stacktrace \
             -PappVersionCode=$VC -PappVersionName=$VN 2>&1 | tee gradle-out.txt
