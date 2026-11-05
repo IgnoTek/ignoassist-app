@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/bg_wid_card">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:id="@+id/wc_circulo"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:gravity="center"
+            android:background="@drawable/bg_wid_circulo_on">
+
+            <ImageView
+                android:id="@+id/wc_icono"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_mic"
+                android:contentDescription="@string/app_name" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/wc_titulo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="IgnoAssist"
+                android:textColor="#0F172A"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/wc_sub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Toca para encender"
+                android:textColor="#64748B"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp">
+
+        <TextView
+            android:id="@+id/wc_toggle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:paddingTop="11dp"
+            android:paddingBottom="11dp"
+            android:text="Encender"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_wid_boton_teal" />
+
+        <TextView
+            android:id="@+id/wc_pausa"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:gravity="center"
+            android:paddingTop="11dp"
+            android:paddingBottom="11dp"
+            android:text="Pausar"
+            android:textColor="#0F172A"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_wid_boton_suave" />
+    </LinearLayout>
+</LinearLayout>

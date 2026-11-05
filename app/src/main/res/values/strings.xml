@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IgnoAssist</string>
+    <string name="wid_boton_desc">Botón redondo: un toque enciende y apaga la escucha.</string>
+    <string name="wid_estado_desc">Estado del micrófono y un toque para encender o apagar.</string>
+    <string name="wid_control_desc">Control con estado, encender/apagar y pausar.</string>
+</resources>
