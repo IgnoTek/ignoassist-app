@@ -28,8 +28,12 @@ object AacEncoder {
         var entradaTerminada = false
         var salidaTerminada = false
         val bytesPorMuestra = 2
+        // Guardia anti-bucle: ~ (muestras/1024 bloques) + margen generoso; si el codec se trabara, salimos en vez de colgar el hilo.
+        var vueltas = 0
+        val maxVueltas = (muestras / 256) + 4000
         try {
             while (!salidaTerminada) {
+                if (++vueltas > maxVueltas) throw IllegalStateException("codec sin avance")
                 if (!entradaTerminada) {
                     val idx = codec.dequeueInputBuffer(10000)
                     if (idx >= 0) {

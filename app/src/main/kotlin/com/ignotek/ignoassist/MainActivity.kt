@@ -138,8 +138,9 @@ class MainActivity : Activity() {
         val codigo = entrada("Código de 6 dígitos", "", InputType.TYPE_CLASS_NUMBER)
         c.addView(url); c.addView(codigo)
         c.addView(boton("Vincular", TEAL, grande = true) {
-            val u = url.text.toString().trim(); val cod = codigo.text.toString().trim()
-            if (!u.startsWith("http") || cod.length != 6) { Toast.makeText(this, "Revisa la dirección y el código de 6 dígitos", Toast.LENGTH_LONG).show(); return@boton }
+            var u = url.text.toString().trim(); val cod = codigo.text.toString().trim()
+            if (u.startsWith("http://")) u = "https://" + u.substring(7)  // la vinculacion intercambia el token: exigir HTTPS
+            if (!u.startsWith("https://") || cod.length != 6) { Toast.makeText(this, "Usa una dirección https:// y el código de 6 dígitos", Toast.LENGTH_LONG).show(); return@boton }
             prefs.serverUrl = u
             vinculando = true
             Thread {

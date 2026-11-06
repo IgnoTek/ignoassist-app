@@ -247,6 +247,7 @@ class ListenService : Service() {
         var vozMs = 0; var silencioMs = 0; var ultimoCorteSilencio = -1
         var inicioSegmentoMs = 0L
         var silencioTotalMs = 0L // para detectar microfono mudo
+        var avisadoMudo = false  // avisa una sola vez por episodio de mudez (no cada 20 s)
         var calentamientoMs = 1500 // ignora el arranque del microfono (ruido de manipulacion)
         var fallos = 0
         var rec: AudioRecord = crearRecorder() ?: run {
@@ -287,9 +288,9 @@ class ListenService : Service() {
             if (calentamientoMs > 0) { calentamientoMs -= 20; vad.esVoz(frame, n); continue }
             val voz = vad.esVoz(frame, n)
             // Microfono mudo (otra app lo tiene, o restriccion de Android al arrancar en segundo plano)
-            if (vad.ultimoDb <= -89.0) silencioTotalMs += 20 else silencioTotalMs = 0
-            if (silencioTotalMs >= 20000) {
-                silencioTotalMs = 0
+            if (vad.ultimoDb <= -89.0) silencioTotalMs += 20 else { silencioTotalMs = 0; avisadoMudo = false }
+            if (silencioTotalMs >= 20000 && !avisadoMudo) {
+                avisadoMudo = true
                 main.post { Notifs.aviso(this, Notifs.ID_REANUDAR, "El micrófono no está dando audio", "Si acabas de reiniciar el teléfono o estás en una llamada, toca aquí para reactivar la escucha.", "reanudar") }
             }
             if (!enSegmento) {
@@ -393,7 +394,7 @@ class ListenService : Service() {
                 main.post { actualizarNotificacion() }
             } else {
                 prefs.ultimoError = "Subida: " + (r.error ?: "error")
-                if (r.codigo == 401) { // dispositivo desvinculado en el servidor
+                if (r.codigo == 401 && r.error == "dispositivo_no_vinculado") { // desvinculado DE VERDAD (no un 401 de un proxy/WAF)
                     prefs.desvincular(); main.post { Notifs.aviso(this, 5, "IgnoAssist se desvinculó", "Abre la app y vincula de nuevo con un código.", "vincular") }
                 } else if (r.codigo == 400 || r.codigo == 413) { // archivo rechazado: no bloquear la cola
                     File(dir, "rechazados").mkdirs(); f.renameTo(File(dir, "rechazados/" + f.name)); metaF.delete()
@@ -423,7 +424,8 @@ class ListenService : Service() {
                 r.json?.let { procesarRespuesta(it) }
             } else {
                 if (resultados.length() > 0) prefs.devolverResultados(resultados)
-                if (r.codigo == 401) { prefs.desvincular(); main.post { Notifs.aviso(this, 5, "IgnoAssist se desvinculó", "Abre la app y vincula de nuevo con un código.", "vincular") } }
+                if (decisiones.length() > 0) prefs.devolverDecisiones(decisiones)
+                if (r.codigo == 401 && r.error == "dispositivo_no_vinculado") { prefs.desvincular(); main.post { Notifs.aviso(this, 5, "IgnoAssist se desvinculó", "Abre la app y vincula de nuevo con un código.", "vincular") } }
                 else prefs.ultimoError = "Sync: " + (r.error ?: "error")
             }
         }
@@ -448,7 +450,15 @@ class ListenService : Service() {
             if (c.has("pausa_minutos_defecto")) prefs.pausaMinutosDefecto = c.optInt("pausa_minutos_defecto", 30)
             if (c.has("destino_acciones")) prefs.destinoAcciones = c.optString("destino_acciones", "lista")
         }
-        j.optJSONArray("estados")?.let { prefs.aplicarEstados(it) }
+        j.optJSONArray("estados")?.let { est ->
+            // Si Raul anula o completa algo desde el panel web, el telefono debe reflejarlo: quitar alarma (y evento del calendario si se anulo).
+            for ((aid, nuevo) in prefs.aplicarEstados(est)) {
+                when (nuevo) {
+                    "anulada" -> prefs.accion(aid)?.let { ejecutor.quitarDelTelefono(aid, it.optString("ref")) }
+                    "completada" -> { ejecutor.cancelarAlarma(aid); Notifs.cancelar(this, Notifs.BASE_RECORDATORIO + aid) }
+                }
+            }
+        }
         val ordenes = j.optJSONArray("ordenes") ?: JSONArray()
         var ejecutadas = 0
         for (i in 0 until ordenes.length()) {

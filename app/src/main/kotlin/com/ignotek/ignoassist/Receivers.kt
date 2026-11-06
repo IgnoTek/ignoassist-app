@@ -63,9 +63,17 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         val prefs = Prefs(ctx)
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            Notifs.crearCanales(ctx)
+            // El servicio no sobrevive un reinicio ni un reemplazo del paquete: limpiamos las banderas para que el mosaico y los widgets no mientan.
+            prefs.grabando = false
+            prefs.servicioActivo = false
+            // Android borra las alarmas al reiniciar: reprogramamos los recordatorios futuros desde la copia local.
+            try { Ejecutor(ctx, prefs).reprogramarAlarmas() } catch (e: Exception) { }
+            try { WidgetMic.actualizarTodos(ctx) } catch (e: Exception) { }
             if (prefs.escuchaDeseada) {
-                Notifs.crearCanales(ctx)
-                Notifs.aviso(ctx, Notifs.ID_REANUDAR, "IgnoAssist: toca para seguir escuchando", "El teléfono se reinició. Un toque y vuelvo a estar atento todo el día.", "reanudar")
+                val txt = if (intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) "IgnoAssist se actualizó. Un toque y vuelvo a estar atento todo el día."
+                          else "El teléfono se reinició. Un toque y vuelvo a estar atento todo el día."
+                Notifs.aviso(ctx, Notifs.ID_REANUDAR, "IgnoAssist: toca para seguir escuchando", txt, "reanudar")
             }
         }
     }

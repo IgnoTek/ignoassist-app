@@ -141,6 +141,23 @@ class Ejecutor(private val ctx: Context, private val prefs: Prefs) {
         am.cancel(pendingAlarma(id, "", ""))
     }
 
+    /** Quita del telefono lo que se anulo desde el panel web: alarma + evento del calendario + notificaciones. */
+    fun quitarDelTelefono(id: Int, ref: String) { deshacerRef(ref, id) }
+
+    /** Android borra TODAS las alarmas al reiniciar: las reprograma desde la copia local (recordatorios/eventos aun futuros y no completados). */
+    fun reprogramarAlarmas() {
+        val arr = prefs.acciones()
+        val ahora = System.currentTimeMillis()
+        for (i in 0 until arr.length()) {
+            val a = arr.optJSONObject(i) ?: continue
+            if (a.optString("estado") == "anulada" || a.has("completada_ms")) continue
+            if (!a.optString("ref").contains("al:")) continue // solo las que usan alarma del telefono (no las que estan solo en el calendario)
+            val ini = a.optLong("inicio_ms", 0L)
+            if (ini <= ahora) continue
+            programarAlarma(a.optInt("id"), ini, a.optString("titulo"), a.optString("descripcion").ifBlank { "Recordatorio de IgnoAssist" })
+        }
+    }
+
     // ------------------------------------------------------------------ ordenes
     /** Ejecuta una orden y devuelve el resultado que se reporta al servidor. */
     fun ejecutar(o: JSONObject): JSONObject {

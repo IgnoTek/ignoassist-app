@@ -58,7 +58,7 @@ class Prefs(ctx: Context) {
         set(v) = sp.edit().putInt("min_voz_ms", v.coerceIn(500, 5000)).apply()
     var pausaMinutosDefecto: Int
         get() = sp.getInt("pausa_min", 30)
-        set(v) = sp.edit().putInt("pausa_min", v).apply()
+        set(v) = sp.edit().putInt("pausa_min", v.coerceIn(0, 1440)).apply()
     /** lista = solo to-do de IgnoAssist | calendario = Google Calendar | ambos */
     var destinoAcciones: String
         get() = sp.getString("destino_acciones", "lista") ?: "lista"
@@ -115,6 +115,12 @@ class Prefs(ctx: Context) {
         sp.edit().putString("decisiones", "[]").apply()
         return arr
     }
+    /** Si el sync falla, devuelve las decisiones a la cola para no perder lo que el usuario eligió. */
+    @Synchronized fun devolverDecisiones(arr: JSONArray) {
+        val actual = JSONArray(sp.getString("decisiones", "[]") ?: "[]")
+        for (i in 0 until arr.length()) actual.put(arr.getJSONObject(i))
+        sp.edit().putString("decisiones", actual.toString()).apply()
+    }
 
     // ---- Historial local de acciones ejecutadas (para la pantalla y para deshacer) ----
     @Synchronized fun registrarAccion(o: JSONObject) {
@@ -146,19 +152,26 @@ class Prefs(ctx: Context) {
         if (hecha) a.put("completada_ms", System.currentTimeMillis()) else a.remove("completada_ms")
         registrarAccion(a)
     }
-    /** Refleja en la copia local los cambios de estado hechos desde el panel (lista "estados" del sync). */
-    @Synchronized fun aplicarEstados(estados: org.json.JSONArray) {
-        var cambio = false
+    /** Refleja en la copia local los cambios de estado hechos desde el panel (lista "estados" del sync).
+     *  Devuelve solo los que CAMBIARON (id -> "anulada"/"completada"/"reabierta") para actuar una sola vez. */
+    @Synchronized fun aplicarEstados(estados: org.json.JSONArray): List<Pair<Int, String>> {
+        val cambios = ArrayList<Pair<Int, String>>()
         for (i in 0 until estados.length()) {
             val e = estados.optJSONObject(i) ?: continue
-            val a = accion(e.optInt("id")) ?: continue
-            if (e.optBoolean("anulada") && a.optString("estado") != "anulada") { a.put("estado", "anulada"); registrarAccion(a); cambio = true }
-            else {
+            val id = e.optInt("id")
+            val a = accion(id) ?: continue
+            if (e.optBoolean("anulada")) {
+                if (a.optString("estado") != "anulada") { a.put("estado", "anulada"); registrarAccion(a); cambios.add(id to "anulada") }
+            } else {
                 val hecha = e.optBoolean("completada")
                 val tenia = a.has("completada_ms")
-                if (hecha != tenia) { if (hecha) a.put("completada_ms", System.currentTimeMillis()) else a.remove("completada_ms"); registrarAccion(a); cambio = true }
+                if (hecha != tenia) {
+                    if (hecha) a.put("completada_ms", System.currentTimeMillis()) else a.remove("completada_ms")
+                    registrarAccion(a); cambios.add(id to if (hecha) "completada" else "reabierta")
+                }
             }
         }
+        return cambios
     }
     @Synchronized fun sugerenciaNotificada(id: Int): Boolean {
         val s = sp.getStringSet("sug_notif", emptySet()) ?: emptySet()
