@@ -17,6 +17,11 @@ class Prefs(ctx: Context) {
         set(v) = sp.edit().putString("token", v).apply()
     val vinculado: Boolean get() = token.length >= 20
 
+    /** E10 "Igno habla": confirmaciones por voz (TTS). Apagado por defecto; lo enciende Raul desde Ajustes. */
+    var ignoHabla: Boolean
+        get() = sp.getBoolean("igno_habla", false)
+        set(v) = sp.edit().putBoolean("igno_habla", v).apply()
+
     /** El usuario quiere la escucha encendida (se restaura tras reinicio / cierre). */
     var escuchaDeseada: Boolean
         get() = sp.getBoolean("escucha_deseada", false)

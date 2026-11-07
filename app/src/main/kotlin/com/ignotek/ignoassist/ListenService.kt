@@ -126,6 +126,12 @@ class ListenService : Service() {
         }
     }
 
+    /** Igno habla (E10). No hace nada si esta apagado; nunca rompe la escucha (todo en try/catch dentro de Voz). */
+    private fun decir(texto: String) {
+        if (!prefs.ignoHabla) return
+        try { Voz.init(this); Voz.hablar(texto) } catch (e: Exception) { }
+    }
+
     private fun apagarServicio() {
         vivo.set(false)
         detenerGrabacion()
@@ -142,6 +148,7 @@ class ListenService : Service() {
         prefs.servicioActivo = false
         despertarSubida(); despertarSync()
         encoderThread?.quitSafely()
+        try { Voz.apagar() } catch (e: Exception) { }
         super.onDestroy()
     }
 
@@ -449,6 +456,7 @@ class ListenService : Service() {
             if (c.has("nombre_usuario")) prefs.nombreUsuario = c.optString("nombre_usuario", "")
             if (c.has("pausa_minutos_defecto")) prefs.pausaMinutosDefecto = c.optInt("pausa_minutos_defecto", 30)
             if (c.has("destino_acciones")) prefs.destinoAcciones = c.optString("destino_acciones", "lista")
+            if (c.has("igno_habla")) prefs.ignoHabla = c.optBoolean("igno_habla", false)
         }
         j.optJSONArray("estados")?.let { est ->
             // Si Raul anula o completa algo desde el panel web, el telefono debe reflejarlo: quitar alarma (y evento del calendario si se anulo).
@@ -480,9 +488,9 @@ class ListenService : Service() {
             if (prefs.comandoVisto(c.optInt("id"))) continue
             val datos = c.optJSONObject("datos") ?: JSONObject()
             when (c.optString("tipo")) {
-                "pausar" -> main.post { pausar(datos.optInt("minutos", prefs.pausaMinutosDefecto).let { if (it <= 0) prefs.pausaMinutosDefecto else it }) }
-                "apagar" -> main.post { prefs.escuchaDeseada = false; prefs.pausadoHasta = 0L; detenerGrabacion(); actualizarNotificacion() }
-                "reanudar" -> main.post { prefs.pausadoHasta = 0L; prefs.escuchaDeseada = true; iniciarGrabacion() }
+                "pausar" -> main.post { val m = datos.optInt("minutos", prefs.pausaMinutosDefecto).let { if (it <= 0) prefs.pausaMinutosDefecto else it }; pausar(m); decir("Listo, pauso $m minutos.") }
+                "apagar" -> main.post { prefs.escuchaDeseada = false; prefs.pausadoHasta = 0L; detenerGrabacion(); actualizarNotificacion(); decir("Apagado. Avísame cuando quieras que siga.") }
+                "reanudar" -> main.post { decir("Aquí estoy, te sigo escuchando."); prefs.pausadoHasta = 0L; prefs.escuchaDeseada = true; iniciarGrabacion() }
                 "aviso" -> {
                     val cuerpo = StringBuilder()
                     cuerpo.append(datos.optString("cuando")).append(" (en ").append(datos.optInt("minutos", 30)).append(" min)")
